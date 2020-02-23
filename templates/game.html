@@ -6,26 +6,41 @@
         <style>
             html, body {
                 overflow: hidden;
+                font-family: sans-serif;
             }
 
             canvas {
+                position: absolute;
+                top: 0px;
+                right: 0px;
                 border: 1px solid black;
-                z-index: 0;
+                z-index: -1;
             }
 
-            #nextTurn {
+            #info {
+                padding: 10px;
+                font-size: 18px;
+                background-color: "#aaaacc";
+                color: "#000000";
+                border-style: solid;
+                border-radius: 5px;
+                border-color: "#444444";
                 float: right;
                 position: absolute;
                 top: 20px;
                 right: 20px;
                 z-index: 3;
+            }
+
+            #nextTurn {
                 background-color: "#00ff55";
                 color: "#ffffff";
                 border-style: solid;
                 border-radius: 5px;
                 border-color: "#00aa00";
-                padding: 2px;
-                font-size: 18px;
+                margin: 10px 2px 2px 2px;
+                padding: 5px;
+                z-index: 0;
             }
         </style>
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
@@ -43,6 +58,7 @@
         var mousePos = {x: 0, y: 0};
 
         var tankSelected = -1;
+        var turnNumber = 1;
 
         var keys = {
             "=": 187,
@@ -291,8 +307,12 @@
             function nextTurn()
             {
                 console.log('next turn')
+                turnNumber++;
+                document.getElementById('turnNumber').innerHTML = "Turn " + turnNumber;
                 socket.emit('nextTurn', {});
             }
+
+            document.getElementById('nextTurn').addEventListener('click', nextTurn);
 
             canvas.addEventListener('mousedown', function(evt) {
                 if (evt.button == 0) {
@@ -399,6 +419,9 @@
     <body>
         <!-- <h1 id="test"></h1> -->
         <canvas id="canvas" width="300" height="300"></canvas>
-        <button id="nextTurn", onclick="nextTurn()">Next Turn</button>
+        <div id="info">
+            <div id="turnNumber">Turn 1</div>
+            <button id="nextTurn">Next Turn</button>
+        </div>
     </body>
 </html>

@@ -9,6 +9,7 @@ from tank import *
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'gG...eZ'
+app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 logging.getLogger('socketio').setLevel(logging.ERROR)
 logging.getLogger('engineio').setLevel(logging.ERROR)
@@ -16,7 +17,7 @@ logging.getLogger('engineio').setLevel(logging.ERROR)
 socketio = SocketIO(app)
 
 map_tiles = []
-with open('maps/courtyard.map') as mapfile:
+with open('maps/tunnelrows.map') as mapfile:
     for line in mapfile:
         map_tiles.append([int(x) for x in line.strip()])
 
@@ -28,14 +29,20 @@ game_map.tiles = map_tiles
 tankWidth = 0.8
 
 game = Game(game_map)
-team1_spawns = [
-    [6,1], [7,1], [8,1],
-    [6,2], [7,2], [8,2]
-]
-team2_spawns = [
-    [5,13], [6,13], [7,13],
-    [5,14], [6,14], [7,14]
-]
+# courtyard.map
+# team1_spawns = [
+#     [6,1], [7,1], [8,1],
+#     [6,2], [7,2], [8,2]
+# ]
+# team2_spawns = [
+#     [5,13], [6,13], [7,13],
+#     [5,14], [6,14], [7,14]
+# ]
+
+# tunnelrows.map
+team1_spawns = [[y, 1] for y in range(2, 8)]
+team2_spawns = [[17, x] for x in range(10,16)]
+
 for i in range(6):
     t = game.newTank("Tank " + str(i+1), 0)
     t.x = team1_spawns[i][0]
