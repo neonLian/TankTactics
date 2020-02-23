@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+    <head>
+        <meta charset="utf-8">
+        <title></title>
+        <style>
+            html, body {
+                overflow: hidden;
+            }
+
+            canvas {
+                border: 1px solid black;
+                z-index: 0;
+            }
+
+            #nextTurn {
+                float: right;
+                position: absolute;
+                top: 20px;
+                right: 20px;
+                z-index: 3;
+                background-color: "#00ff55";
+                color: "#ffffff";
+                border-style: solid;
+                border-radius: 5px;
+                border-color: "#00aa00";
+                padding: 2px;
+                font-size: 18px;
+            }
+        </style>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.3/socket.io.min.js"></script>
+        <script>
+
+        var game_map = null;
+        var tanks = [];
+
+        var cameraX = 0;
+        var cameraY = 0;
+        var cameraZoom = 1;
+        var tileDefaultWidth = 30;
+
+        var mousePos = {x: 0, y: 0};
+
+        var tankSelected = -1;
+
+        var keys = {
+            "=": 187,
+            "-": 189,
+            "left": 37,
+            "up": 38,
+            "right": 39,
+            "down": 40,
+            "enter": 13
+        }
+
+        window.addEventListener("DOMContentLoaded", function() {
+
+            // Canvas drawing
+            var canvas = document.getElementById("canvas");
+            var ctx = canvas.getContext('2d');
+
+
+
+            function resizeCanvas() {
+                canvas.width = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+                canvas.height = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
+            }
+
+            function clearScreen() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height)
+            }
+
+            function drawSquare() {
+                var rectW = 20;
+                var rectH = 20;
+                ctx.fillStyle = 'rgb(255, 50, 50)';
+                ctx.fillRect(canvas.width/2 - rectW/2, canvas.height/2 - rectH/2, rectW, rectH);
+            }
+
+            function drawMap() {
+                if (game_map)
+                {
+                    for (var x = 0; x < game_map.length; x++)
+                    {
+                        for (var y = 0; y < game_map[x].length; y++)
+                        {
+                            var tile = game_map[x][y];
+                            var tileWidth = tileDefaultWidth*cameraZoom;
+                            var tileX = (x*tileWidth + cameraX);
+                            var tileY = (y*tileWidth + cameraY);
+
+                            if (tile === 1)
+                            {
+                                ctx.fillStyle = 'rgb(230, 200, 115)';
+                                ctx.fillRect(tileX, tileY, tileWidth, tileWidth);
+
+                                ctx.lineWidth = 2 * cameraZoom;
+                                ctx.strokeStyle = 'rgb(200, 170, 85)';
+                                ctx.strokeRect(tileX, tileY, tileWidth, tileWidth);
+                            }
+                            else if (tile === 2)
+                            {
+                                ctx.fillStyle = '#47586e';
+                                ctx.fillRect(tileX, tileY, tileWidth, tileWidth);
+
+                                ctx.lineWidth = 2 * cameraZoom;
+                                ctx.strokeStyle = '#313d4d';
+                                ctx.strokeRect(tileX, tileY, tileWidth, tileWidth);
+                            }
+                        }
+                    }
+                }
+            }
+
+
+
+            function drawTanks() {
+                if (tanks)
+                {
+                    for (var i = 0; i < tanks.length; i++)
+                    {
+                        var t = tanks[i];
+                        if (!t.enabled) { continue; }
+                        ctx.fillStyle = t.fillColor;
+                        if (tankSelected === i) {
+                            ctx.strokeStyle = "#ff8400";
+                        } else {
+                            ctx.strokeStyle = t.strokeColor;
+                        }
+                        ctx.lineWidth = 2 * cameraZoom;
+                        var tw = tileDefaultWidth*cameraZoom*0.6;
+                        var tx = (t.x*tileDefaultWidth*cameraZoom + cameraX) + ((tileDefaultWidth*cameraZoom)/2) - tw/2;
+                        var ty = (t.y*tileDefaultWidth*cameraZoom + cameraY) + ((tileDefaultWidth*cameraZoom)/2) - tw/2;
+
+                        ctx.fillRect(tx, ty, tw, tw);
+                        ctx.strokeRect(tx, ty, tw, tw);
+
+                        // Draw health
+                        ctx.font = 16*cameraZoom + "px Arial";
+                        ctx.fillStyle = "#dddddd";
+                        ctx.fillText(t.hp, tx+(tw/3), ty+(tileDefaultWidth*cameraZoom/2))
+                    }
+                }
+            }
+
+            function getTileMousePos() {
+                return {
+                    x: (mousePos.x - cameraX) / (tileDefaultWidth*cameraZoom),
+                    y: (mousePos.y - cameraY) / (tileDefaultWidth*cameraZoom)
+                }
+            }
+
+            function getHoveringTile() {
+                return {
+                    x: Math.floor(getTileMousePos().x),
+                    y: Math.floor(getTileMousePos().y)
+                }
+            }
+
+            function showHoveringTile() {
+                var curTile = getHoveringTile();
+                var tileWidth = tileDefaultWidth*cameraZoom;
+                var tileX = (curTile.x*tileWidth + cameraX);
+                var tileY = (curTile.y*tileWidth + cameraY);
+
+                ctx.strokeStyle = '#88ff88';
+                ctx.strokeRect(tileX, tileY, tileWidth, tileWidth);
+            }
+
+            function getMousePos(canvas, evt) {
+                var rect = canvas.getBoundingClientRect();
+                return {
+                  x: evt.clientX - rect.left,
+                  y: evt.clientY - rect.top
+                };
+            }
+
+            function checkTankSelection()
+            {
+                var curTile = getHoveringTile();
+                tankSelected = -1;
+                for (var i = 0; i < tanks.length; i++)
+                {
+                    if (tanks[i].x === curTile.x && tanks[i].y === curTile.y) {
+                        tankSelected = i;
+                        break;
+                    }
+                }
+            }
+
+            function moveSelectedTank()
+            {
+                if (tankSelected >= 0)
+                {
+                    var curTile = getHoveringTile();
+                    socket.emit('move', {tank: tankSelected, x: curTile.x, y: curTile.y})
+                }
+            }
+
+            function tileContainsTank(x, y)
+            {
+                for (var i = 0; i < tanks.length; i++)
+                {
+                    var t = tanks[i];
+                    if (t.x == x && t.y == y) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            var canShoot = false;
+            var targetingTank = false;
+            function checkShot()
+            {
+                if (tankSelected >= 0) {
+                    var t = tanks[tankSelected]
+                    socket.emit('checkShot', {fromX: t.x+0.5, fromY: t.y+0.5, toX: getTileMousePos().x, toY: getTileMousePos().y})
+                }
+            }
+
+            function drawAimLine()
+            {
+                if (tankSelected != -1)
+                {
+                    var t = tanks[tankSelected]
+                    var tw = tileDefaultWidth*cameraZoom*0.6;
+                    var tx = (t.x*tileDefaultWidth*cameraZoom + cameraX) + ((tileDefaultWidth*cameraZoom)/2);
+                    var ty = (t.y*tileDefaultWidth*cameraZoom + cameraY) + ((tileDefaultWidth*cameraZoom)/2);
+                    if (!targetingTank) {
+                        ctx.strokeStyle = '#999999';
+                    } else if (canShoot) {
+                        if (t.energy >= 2) {
+                            ctx.strokeStyle = '#00ff77';
+                        } else {
+                            ctx.strokeStyle = '#fcf803';
+                        }
+                    } else {
+                        ctx.strokeStyle = '#ff3526';
+                    }
+                    ctx.beginPath();
+                    ctx.moveTo(tx, ty);
+                    ctx.lineTo(mousePos.x, mousePos.y);
+                    ctx.stroke();
+                }
+            }
+
+            var canMove = false;
+            var movePath = [];
+            function checkMove()
+            {
+                if (tankSelected >= 0)
+                {
+                    var mouseTile = getHoveringTile();
+                    socket.emit('checkMove', {tank: tankSelected, x: mouseTile.x, y:mouseTile.y})
+                }
+            }
+
+            function drawMoveLine()
+            {
+                if (tankSelected >= 0 && movePath.length > 0)
+                {
+
+                    var t = tanks[tankSelected];
+                    var halfTile = (tileDefaultWidth*cameraZoom)/2
+                    if (canMove) {
+                        ctx.strokeStyle = '#0335fc';
+                    } else {
+                        ctx.strokeStyle = '#f2a827';
+                    }
+                    ctx.beginPath();
+                    ctx.moveTo(t.x*tileDefaultWidth*cameraZoom+halfTile+cameraX, t.y*tileDefaultWidth*cameraZoom+halfTile+cameraY);
+                    for (var i = 0; i < movePath.length; i++)
+                    {
+                        ctx.lineTo(movePath[i][0]*tileDefaultWidth*cameraZoom+halfTile+cameraX, movePath[i][1]*tileDefaultWidth*cameraZoom+halfTile+cameraY);
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            function shoot()
+            {
+                if (tankSelected >= 0 && tileContainsTank(getHoveringTile().x, getHoveringTile().y))
+                {
+                    console.log('shooting');
+                    socket.emit('shoot', {shooter: tankSelected, toX: getTileMousePos().x, toY: getTileMousePos().y})
+                }
+            }
+
+            function nextTurn()
+            {
+                console.log('next turn')
+                socket.emit('nextTurn', {});
+            }
+
+            canvas.addEventListener('mousedown', function(evt) {
+                if (evt.button == 0) {
+                    checkTankSelection();
+                    checkShot();
+                } else if (evt.button == 2) {
+                    if (tileContainsTank(getHoveringTile().x, getHoveringTile().y)) {
+                        shoot();
+                    } else {
+                        moveSelectedTank();
+                    }
+                }
+
+            }, false);
+
+
+            var prevTileX = -1;
+            var prevTileY = -1;
+            canvas.addEventListener('mousemove', function(evt) {
+                mousePos = getMousePos(canvas, evt);
+                checkShot();
+                mouseTilePos = getHoveringTile();
+                if (prevTileX != mouseTilePos.x || prevTileY != mouseTilePos.y)
+                {
+                    prevTileX = mouseTilePos.x;
+                    prevTileY = mouseTilePos.y;
+
+                    // console.log(mouseTilePos);
+
+                    if (mouseTilePos.x >= 0 && mouseTilePos.x <= game_map.length &&
+                        mouseTilePos.y >= 0 && mouseTilePos.y <= game_map[0].length &&
+                        game_map[mouseTilePos.x][mouseTilePos.y] == 1)
+                    {
+                        checkMove();
+                    }
+                }
+            }, false);
+
+            canvas.addEventListener("contextmenu", function(e){
+                e.preventDefault();
+            }, false);
+
+
+            document.addEventListener("keydown", function(e) {
+                var key = e.keyCode;
+                console.log("received key " + key);
+                if (key == keys["="]) {
+                    cameraZoom += 0.5;
+                } else if (key == keys["-"]) {
+                    cameraZoom -= 0.5;
+                } else if (key == keys["up"]) {
+                    cameraY += tileDefaultWidth*cameraZoom;
+                } else if (key == keys["down"]) {
+                    cameraY -= tileDefaultWidth*cameraZoom;
+                } else if (key == keys["left"]) {
+                    cameraX += tileDefaultWidth*cameraZoom;
+                } else if (key == keys["right"]) {
+                    cameraX -= tileDefaultWidth*cameraZoom;
+                } else if (key == keys["enter"]) {
+                    nextTurn();
+                }
+            })
+
+            setInterval(function() {
+                resizeCanvas();
+                clearScreen();
+                drawMap();
+                showHoveringTile();
+                drawTanks();
+                if (tileContainsTank(getHoveringTile().x, getHoveringTile().y)) {
+                    drawAimLine();
+                } else {
+                    drawMoveLine();
+                }
+            }, 1000/30)
+
+
+            // Networking
+            var socket = io.connect('http://' + document.domain + ':' + location.port);
+
+            socket.on('connect', function() {
+                socket.emit('syncData')
+            })
+
+            socket.on('syncData', function(msg) {
+                game_map = msg.map;
+                tanks = msg.tanks;
+            })
+
+            socket.on('checkShot', function(msg) {
+                canShoot = msg.canShoot;
+                targetingTank = msg.targetingTank;
+            })
+
+            socket.on('checkMove', function(msg) {
+                canMove = msg.canMove;
+                movePath = msg.path;
+            })
+
+        }, false)
+
+        </script>
+    </head>
+    <body>
+        <!-- <h1 id="test"></h1> -->
+        <canvas id="canvas" width="300" height="300"></canvas>
+        <button id="nextTurn", onclick="nextTurn()">Next Turn</button>
+    </body>
+</html>

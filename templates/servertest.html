@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+    <head>
+        <meta charset="utf-8">
+        <title>Flask socket IO testing</title>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.3/socket.io.min.js"></script>
+
+
+    </head>
+    <body>
+        <canvas id="canvas" width="200" height="200"></canvas>
+        <button type="button" name="up" onclick="ButtonUp();">Up</button>
+        <button type="button" name="down" onclick="ButtonDown();">down</button>
+
+        <script type="text/javascript">
+            var socket = io.connect('http://' + document.domain + ':' + location.port);
+
+            function ButtonUp()
+            {
+                socket.emit('move', { direction: "up"})
+            }
+
+            function ButtonDown()
+            {
+                socket.emit('move', { direction: "down"})
+            }
+
+            var canvas = document.getElementsByTagName('canvas')[0];
+            var ctx = canvas.getContext('2d');
+
+            var rectX = 0;
+            var rectY = 0;
+
+            socket.on('connect', function() {
+                socket.emit('syncData')
+            })
+
+            socket.on('syncData', function(msg){
+                rectX = msg.rectX;
+                rectY = msg.rectY;
+            })
+
+            socket.on('moveResponse', function(msg)
+            {
+                rectX = msg.rectX;
+                rectY = msg.rectY;
+            })
+
+            setInterval(function(){
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                ctx.beginPath();
+                ctx.fillRect(rectX, rectY, 100, 100);
+            }, 1000/60);
+        </script>
+    </body>
+</html>
