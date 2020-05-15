@@ -68,17 +68,20 @@ def move(msg):
         path = game.shortestPath(t.x, t.y, msg["x"], msg["y"])
         canMove = len(path) > 0 and len(path) <= t.energy
     if canMove:
+        print(t.energy)
         t.moveTo(msg["x"], msg["y"]);
         t.energy -= len(path);
         socketio.emit('syncData', currentSyncData(), broadcast=True)
 
 @socketio.on('checkMove')
 def checkMove(msg):
+    print("Received check move check")
     canMove = False
     if game.map.tiles[msg["x"]][msg["y"]] == tileType["empty"]:
         t = game.tanks[msg["tank"]]
         path = game.shortestPath(t.x, t.y, msg["x"], msg["y"])
         canMove = len(path) > 0 and len(path) <= t.energy
+    print("Sending move check results")
     socketio.emit('checkMove', {"path": path, "canMove": canMove})
 
 @socketio.on('shoot')
@@ -122,7 +125,7 @@ def shoot(msg):
 @socketio.on('nextTurn')
 def nextTurn(msg):
     for t in game.tanks:
-        t.energy = 3
+        t.energy = TANK_MAX_ENERGY
     print("Next turn")
     socketio.emit('syncData', currentSyncData(), broadcast=True)
 

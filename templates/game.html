@@ -76,6 +76,8 @@
             var canvas = document.getElementById("canvas");
             var ctx = canvas.getContext('2d');
 
+            ctx.translate(0.5, 0.5);
+
 
 
             function resizeCanvas() {
@@ -232,7 +234,14 @@
             {
                 if (tankSelected >= 0) {
                     var t = tanks[tankSelected]
-                    socket.emit('checkShot', {fromX: t.x+0.5, fromY: t.y+0.5, toX: getTileMousePos().x, toY: getTileMousePos().y})
+                    mouseTilePos = getHoveringTile();
+                    for (var i = 0; i < tanks.length; i++)
+                    {
+                        if (mouseTilePos.x == tanks[i].x && mouseTilePos.y == tanks[i].y) {
+                            socket.emit('checkShot', {fromX: t.x+0.5, fromY: t.y+0.5, toX: getTileMousePos().x, toY: getTileMousePos().y})
+                        }
+                    }
+
                 }
             }
 
@@ -268,6 +277,7 @@
             {
                 if (tankSelected >= 0)
                 {
+                    console.log("Sending move check")
                     var mouseTile = getHoveringTile();
                     socket.emit('checkMove', {tank: tankSelected, x: mouseTile.x, y:mouseTile.y})
                 }
@@ -347,6 +357,7 @@
                         game_map[mouseTilePos.x][mouseTilePos.y] == 1)
                     {
                         checkMove();
+
                     }
                 }
             }, false);
@@ -360,9 +371,9 @@
                 var key = e.keyCode;
                 console.log("received key " + key);
                 if (key == keys["="]) {
-                    cameraZoom += 0.5;
+                    cameraZoom += 0.25;
                 } else if (key == keys["-"]) {
-                    cameraZoom -= 0.5;
+                    cameraZoom -= 0.25;
                 } else if (key == keys["up"]) {
                     cameraY += tileDefaultWidth*cameraZoom;
                 } else if (key == keys["down"]) {
@@ -410,6 +421,7 @@
             socket.on('checkMove', function(msg) {
                 canMove = msg.canMove;
                 movePath = msg.path;
+                // console.log(movePath);
             })
 
         }, false)

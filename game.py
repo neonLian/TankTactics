@@ -3,11 +3,20 @@ from map import *
 from util import *
 from math import floor, ceil
 
+from queue import PriorityQueue
+
+
 class Game:
     def __init__(self, map):
         self.tanks = []
         self.map = map
         self.teamColors = {"Cobalt": ["#080163", "#0a0096"], "Vermillion": ["#cf2b1d", "#E34234"]}
+
+        self.pathfinding = {
+            "dist": {},
+            "prev": {},
+            "source": None
+        }
 
     def newTank(self, name: str, team: int):
         tank = Tank(name, team)
@@ -32,7 +41,66 @@ class Game:
                         return False
         return True
 
+    def calculatePaths(self, x1, y1):
+        self.pathfinding["dist"] = {}
+        self.pathfinding["prev"] = {}
+        self.pathfinding["source"] = (x1, y1)
+
+        pq = PriorityQueue()
+        pq.put( (0, (x1,y1)) )
+        self.pathfinding["dist"][(x1, y1)] = 0
+        while not pq.empty():
+            cur = pq.get()[1]
+            x = cur[0]
+            y = cur[1]
+
+            others = [
+                (x-1, y-1), (x, y-1), (x+1, y-1),
+                (x-1, y),             (x+1, y),
+                (x-1, y+1), (x, y+1), (x+1, y+1)
+            ]
+            connected = []
+            for o in others:
+                if o[0] >= 0 and o[0] < len(self.map.tiles) and o[1] >= 0 and o[1] < len(self.map.tiles[0]):
+                        if self.map.tiles[o[0]][o[1]] == tileType["empty"]:
+                            connected.append(o)
+            for o in connected:
+                if  o not in self.pathfinding["dist"] or \
+                    self.pathfinding["dist"][o] > self.pathfinding["dist"][cur] + 1:
+
+                    d = self.pathfinding["dist"][cur] + 1;
+                    self.pathfinding["dist"][o] = d;
+                    self.pathfinding["prev"][o] = cur;
+                    if d <= TANK_MAX_ENERGY:
+                        pq.put( (d, o) )
+        print("Finished calculating paths for root " + str((x1, y1)))
+        # print("prev: " + str(self.pathfinding["prev"]))
+        # print("dist: " + str(self.pathfinding["dist"]))
+
+
     def shortestPath(self, x1, y1, x2, y2):
+        if x1 == x2 and y1 == y2:
+            return []
+        source = self.pathfinding["source"]
+        if source is None or (source[0] != x1 or source[1] != y1):
+            self.calculatePaths(x1, y1)
+        path = []
+        current = (x2, y2)
+        while True:
+            if ((current[0] == x1) and (current[1] == y1)) or current in self.pathfinding["prev"]:
+
+                # print(str(current) + " " + str(path))
+                # print(self.pathfinding["prev"][current])
+                if (current[0] == x1) and (current[1] == y1):
+                    # print(str(current) + " is source node (" + x1 + ", " + y1 + ")")
+                    return path
+                path.insert(0, current)
+                current = self.pathfinding["prev"][current]
+            else:
+                return []
+
+
+    def shortestPathOld(self, x1, y1, x2, y2):
         if x1 == x2 and y1 == y2:
             return []
         visited = [[None]*len(self.map.tiles[0]) for x in [None]*len(self.map.tiles)]

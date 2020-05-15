@@ -1,3 +1,4 @@
+TANK_MAX_ENERGY = 4
 
 
 class Tank:
@@ -5,7 +6,7 @@ class Tank:
         self.name = name
         self.hp = 5
         self.enabled = True
-        self.energy = 3
+        self.energy = TANK_MAX_ENERGY
         self.team = team
         self.strokeColor = "#CCCCCC"
         self.fillColor = "#FFFFFF"
