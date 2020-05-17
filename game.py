@@ -5,18 +5,32 @@ from math import floor, ceil
 
 from queue import PriorityQueue
 
+TANK_WIDTH = 0.8
 
 class Game:
     def __init__(self, map):
         self.tanks = []
         self.map = map
-        self.teamColors = {"Cobalt": ["#080163", "#0a0096"], "Vermillion": ["#cf2b1d", "#E34234"]}
+        self.teamNames = ["Cobalt", "Vermillion"]
+        self.teamColors = {self.teamNames[0]: ["#080163", "#0a0096"], self.teamNames[1]: ["#cf2b1d", "#E34234"]}
 
         self.pathfinding = {
             "dist": {},
             "prev": {},
             "source": None
         }
+
+        self.turnNumber = 1
+        self.turnPlayer = 0
+
+    def nextTurn(self):
+        for t in self.tanks:
+            t.energy = TANK_MAX_ENERGY
+        self.turnNumber += 1
+        if (self.turnPlayer == 0):
+            self.turnPlayer = 1
+        else:
+            self.turnPlayer = 0
 
     def newTank(self, name: str, team: int):
         tank = Tank(name, team)
@@ -39,6 +53,12 @@ class Game:
                     tileIntersect = intersectSquare((x1, y1), (x2, y2), row, col, 1)
                     if tileIntersect:
                         return False
+        for t in self.tanks:
+            if t.x == floor(x1) and t.y == floor(y1): continue
+            if t.x == floor(x2) and t.y == floor(y2): continue
+
+            if intersectSquare((x1, y1), (x2, y2), t.x + (1-TANK_WIDTH)/2, t.y + (1-TANK_WIDTH)/2, TANK_WIDTH):
+                return False
         return True
 
     def calculatePaths(self, x1, y1):
@@ -55,15 +75,23 @@ class Game:
             y = cur[1]
 
             others = [
-                (x-1, y-1), (x, y-1), (x+1, y-1),
+                            (x, y-1),
                 (x-1, y),             (x+1, y),
-                (x-1, y+1), (x, y+1), (x+1, y+1)
+                            (x, y+1),
+                (x-1, y-1),           (x+1, y-1),
+                (x-1, y+1),           (x+1, y+1)
             ]
             connected = []
             for o in others:
                 if o[0] >= 0 and o[0] < len(self.map.tiles) and o[1] >= 0 and o[1] < len(self.map.tiles[0]):
                         if self.map.tiles[o[0]][o[1]] == tileType["empty"]:
-                            connected.append(o)
+                            hasTank = False
+                            for t in self.tanks:
+                                if o[0] == t.x and o[1] == t.y:
+                                    hasTank = True
+                                    break
+                            if not hasTank:
+                                connected.append(o)
             for o in connected:
                 if  o not in self.pathfinding["dist"] or \
                     self.pathfinding["dist"][o] > self.pathfinding["dist"][cur] + 1:

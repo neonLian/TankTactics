@@ -26,7 +26,6 @@ game_map = Map(len(map_tiles), len(map_tiles[0]))
 # game_map.setTile(3, 4, tileType["solid"])
 game_map.tiles = map_tiles
 
-tankWidth = 0.8
 
 game = Game(game_map)
 # courtyard.map
@@ -94,8 +93,8 @@ def shoot(msg):
     x2 = msg['toX']
     y2 = msg['toY']
     # print(x2, y2)
-    isTargetingTank = (x2 % 1) >= 1 - tankWidth and (x2 % 1) <= tankWidth and \
-                      (y2 % 1) >= 1 - tankWidth and (y2 % 1) <= tankWidth
+    isTargetingTank = (x2 % 1) >= 1 - TANK_WIDTH and (x2 % 1) <= TANK_WIDTH and \
+                      (y2 % 1) >= 1 - TANK_WIDTH and (y2 % 1) <= TANK_WIDTH
     if isTargetingTank:
         # print("Targeted tank")
         targetTank = None
@@ -124,8 +123,8 @@ def shoot(msg):
 
 @socketio.on('nextTurn')
 def nextTurn(msg):
-    for t in game.tanks:
-        t.energy = TANK_MAX_ENERGY
+
+    game.nextTurn()
     print("Next turn")
     socketio.emit('syncData', currentSyncData(), broadcast=True)
 
@@ -133,8 +132,8 @@ def nextTurn(msg):
 def checkShot(msg):
     x2 = msg['toX']
     y2 = msg['toY']
-    isTargetingTank = (x2 % 1) >= 1 - tankWidth and (x2 % 1) <= tankWidth and \
-                      (y2 % 1) >= 1 - tankWidth and (y2 % 1) <= tankWidth
+    isTargetingTank = (x2 % 1) >= 1 - TANK_WIDTH and (x2 % 1) <= TANK_WIDTH and \
+                      (y2 % 1) >= 1 - TANK_WIDTH and (y2 % 1) <= TANK_WIDTH
     if isTargetingTank:
         canShoot = game.canShoot(msg['fromX'], msg['fromY'], msg['toX'], msg['toY'])
     else:
@@ -142,7 +141,8 @@ def checkShot(msg):
     socketio.emit('checkShot', {"canShoot": canShoot, "targetingTank": isTargetingTank})
 
 def currentSyncData():
-    return {"map": game_map.tiles, "tanks": game.getTanksJson()}
+    return {"map": game_map.tiles, "tanks": game.getTanksJson(), "teams": {"names": game.teamNames, "colors": game.teamColors},
+            "turnNumber": game.turnNumber, "turnPlayer": game.turnPlayer}
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', debug=False)

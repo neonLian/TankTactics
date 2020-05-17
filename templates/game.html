@@ -158,6 +158,31 @@
                         ctx.font = 16*cameraZoom + "px Arial";
                         ctx.fillStyle = "#dddddd";
                         ctx.fillText(t.hp, tx+(tw/3), ty+(tileDefaultWidth*cameraZoom/2))
+
+                        // Draw energy
+
+                        if (t.team == turnPlayer)
+                        {
+                            for (var j = 1; j <= 4; j++)
+                            {
+                                if (t.energy >= j) {
+                                    ctx.fillStyle = 'yellow';
+                                } else {
+                                    ctx.fillStyle = 'gray';
+                                }
+
+                                var x = (t.x + 0.225 + ((j-1)/4)*0.6)*tileDefaultWidth*cameraZoom + cameraX;
+                                var y = (t.y + 0.05)*tileDefaultWidth*cameraZoom + cameraY;
+                                var w = 0.1*tileDefaultWidth*cameraZoom;
+
+                                ctx.fillRect(x, y, w, w);
+                                ctx.lineWidth = 0.3*cameraZoom;
+                                ctx.strokeStyle = '#000000';
+                                ctx.strokeRect(x, y, w, w);
+                            }
+                        }
+
+
                     }
                 }
             }
@@ -200,7 +225,7 @@
                 tankSelected = -1;
                 for (var i = 0; i < tanks.length; i++)
                 {
-                    if (tanks[i].x === curTile.x && tanks[i].y === curTile.y) {
+                    if (tanks[i].x === curTile.x && tanks[i].y === curTile.y && tanks[i].team == turnPlayer) {
                         tankSelected = i;
                         break;
                     }
@@ -264,6 +289,7 @@
                     } else {
                         ctx.strokeStyle = '#ff3526';
                     }
+                    ctx.lineWidth = 2*cameraZoom;
                     ctx.beginPath();
                     ctx.moveTo(tx, ty);
                     ctx.lineTo(mousePos.x, mousePos.y);
@@ -295,6 +321,7 @@
                     } else {
                         ctx.strokeStyle = '#f2a827';
                     }
+                    ctx.lineWidth = 2*cameraZoom;
                     ctx.beginPath();
                     ctx.moveTo(t.x*tileDefaultWidth*cameraZoom+halfTile+cameraX, t.y*tileDefaultWidth*cameraZoom+halfTile+cameraY);
                     for (var i = 0; i < movePath.length; i++)
@@ -314,12 +341,19 @@
                 }
             }
 
+            var turnPlayer = 0;
+            var teamInfo = {};
             function nextTurn()
             {
                 console.log('next turn')
-                turnNumber++;
-                document.getElementById('turnNumber').innerHTML = "Turn " + turnNumber;
                 socket.emit('nextTurn', {});
+            }
+
+            function updateTurnInfo()
+            {
+                document.getElementById('turnNumber').innerHTML = "Turn " + turnNumber;
+                document.getElementById('turnPlayer').innerHTML = teamInfo.names[turnPlayer] + "'s turn";
+                document.getElementById('turnPlayer').style.color = teamInfo.colors[teamInfo.names[turnPlayer]][1];
             }
 
             document.getElementById('nextTurn').addEventListener('click', nextTurn);
@@ -371,9 +405,9 @@
                 var key = e.keyCode;
                 console.log("received key " + key);
                 if (key == keys["="]) {
-                    cameraZoom += 0.25;
+                    cameraZoom += 0.1;
                 } else if (key == keys["-"]) {
-                    cameraZoom -= 0.25;
+                    cameraZoom -= 0.1;
                 } else if (key == keys["up"]) {
                     cameraY += tileDefaultWidth*cameraZoom;
                 } else if (key == keys["down"]) {
@@ -411,6 +445,15 @@
             socket.on('syncData', function(msg) {
                 game_map = msg.map;
                 tanks = msg.tanks;
+                turnPlayer = msg.turnPlayer;
+                turnNumber = msg.turnNumber;
+                teamInfo = msg.teams;
+                updateTurnInfo();
+
+                if (tankSelected >= 0 && tanks[tankSelected].energy <= 0)
+                {
+                    tankSelected = -1;
+                }
             })
 
             socket.on('checkShot', function(msg) {
@@ -433,6 +476,7 @@
         <canvas id="canvas" width="300" height="300"></canvas>
         <div id="info">
             <div id="turnNumber">Turn 1</div>
+            <div id="turnPlayer">Player 1's Turn</div>
             <button id="nextTurn">Next Turn</button>
         </div>
     </body>
