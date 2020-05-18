@@ -90,11 +90,14 @@ def shoot(msg):
     print(t.energy)
     if t.energy < 2:
         return
-    x2 = msg['toX']
-    y2 = msg['toY']
-    # print(x2, y2)
-    isTargetingTank = (x2 % 1) >= 1 - TANK_WIDTH and (x2 % 1) <= TANK_WIDTH and \
-                      (y2 % 1) >= 1 - TANK_WIDTH and (y2 % 1) <= TANK_WIDTH
+    # Rounding is to fix floating point division errors
+    x2 = round(msg['toX'], 3)
+    y2 = round(msg['toY'], 3)
+    check1 = round((x2 % 1), 3) >= round((1 - TANK_WIDTH)/2, 3)
+    check2 = round((x2 % 1), 3) <= round(TANK_WIDTH+(1 - TANK_WIDTH)/2, 3)
+    check3 = round((y2 % 1), 3) >= round((1 - TANK_WIDTH)/2, 3)
+    check4 = round((y2 % 1), 3) <= round(TANK_WIDTH+(1 - TANK_WIDTH)/2, 3)
+    isTargetingTank = check1 and check2 and check3 and check4
     if isTargetingTank:
         # print("Targeted tank")
         targetTank = None
@@ -119,7 +122,7 @@ def shoot(msg):
         else:
             print("Not targeting tank tile")
     else:
-        print("Not targeting tank")
+        print("Not targeting tank (" + str(x2) + ", " + str(y2) + ")")
 
 @socketio.on('nextTurn')
 def nextTurn(msg):
@@ -139,6 +142,32 @@ def checkShot(msg):
     else:
         canShoot = False
     socketio.emit('checkShot', {"canShoot": canShoot, "targetingTank": isTargetingTank})
+
+@socketio.on('checkTankShot')
+def checkTankShot(msg):
+    x2 = msg['toX']
+    y2 = msg['toY']
+    t = None
+    for tank in game.tanks:
+        if tank.x == floor(x2) and tank.y == floor(y2):
+            t = tank
+            break
+    canShoot = False
+    targetLoc = (x2, y2)
+    if t != None:
+        targets = [
+            (t.x + 0.5, t.y + 0.5),  # center
+            (t.x + (1-TANK_WIDTH)/2, t.y + (1-TANK_WIDTH)/2),  # top left
+            (t.x + TANK_WIDTH+(1-TANK_WIDTH)/2, t.y + (1-TANK_WIDTH)/2),  # top right
+            (t.x + (1-TANK_WIDTH)/2, t.y + TANK_WIDTH+(1-TANK_WIDTH)/2),  # bottom left
+            (t.x + TANK_WIDTH+(1-TANK_WIDTH)/2, t.y + TANK_WIDTH+(1-TANK_WIDTH)/2),  # bottom right
+        ]
+        for target in targets:
+            if game.canShoot(msg['fromX'], msg['fromY'], target[0], target[1]):
+                targetLoc = target
+                canShoot = True
+                break
+    socketio.emit('checkTankShot', {"canShoot": canShoot, "targetLoc": targetLoc})
 
 def currentSyncData():
     return {"map": game_map.tiles, "tanks": game.getTanksJson(), "teams": {"names": game.teamNames, "colors": game.teamColors},
