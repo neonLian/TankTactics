@@ -51,6 +51,11 @@ for i in range(6):
     t.x = team2_spawns[i][0]
     t.y = team2_spawns[i][1]
 
+game.zoneObjectives += [
+    [(1, 11, 3),(9, 0, 3)],
+    [(16, 7, 3),(9, 17, 3)]
+]
+
 @app.route('/')
 def sessions():
     return render_template('game.html')
@@ -170,7 +175,9 @@ def checkTankShot(msg):
     socketio.emit('checkTankShot', {"canShoot": canShoot, "targetLoc": targetLoc})
 
 def currentSyncData():
-    return {"map": game_map.tiles, "tanks": game.getTanksJson(), "teams": {"names": game.teamNames, "colors": game.teamColors},
+    return {"map": game_map.tiles, "tanks": game.getTanksJson(),
+            "teams": {"names": game.teamNames, "colors": game.teamColors, "scores": game.teamScores},
+            "zoneObjectives": game.zoneObjectives,
             "turnNumber": game.turnNumber, "turnPlayer": game.turnPlayer}
 
 if __name__ == '__main__':

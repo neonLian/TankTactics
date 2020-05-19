@@ -48,7 +48,8 @@
         <script>
 
         var game_map = null;
-        var tanks = [];
+        var tanks = null;
+        var zoneObjectives = null;
 
         var cameraX = 0;
         var cameraY = 0;
@@ -135,7 +136,26 @@
                 }
             }
 
-
+            function drawObjectives()
+            {
+                if (zoneObjectives)
+                {
+                    for (var i = 0; i < zoneObjectives.length; i++)
+                    {
+                        for (var j = 0; j < zoneObjectives[i].length; j++)
+                        {
+                            ctx.fillStyle = teamInfo.colors[i][0] + "30";
+                            ctx.strokeStyle = teamInfo.colors[i][1] + "80";
+                            ctx.lineWidth = 0.02 * tileDefaultWidth * cameraZoom;
+                            var x = zoneObjectives[i][j][0] * tileDefaultWidth * cameraZoom;
+                            var y = zoneObjectives[i][j][1] * tileDefaultWidth * cameraZoom;
+                            var w = zoneObjectives[i][j][2] * tileDefaultWidth * cameraZoom;
+                            ctx.fillRect(x, y, w, w);
+                            ctx.strokeRect(x, y, w, w);
+                        }
+                    }
+                }
+            }
 
             function drawTanks() {
                 if (tanks)
@@ -355,11 +375,19 @@
                 socket.emit('nextTurn', {});
             }
 
+            function updateScoreInfo()
+            {
+                document.getElementById('score1').innerHTML = teamInfo.names[0] + ": " + teamInfo.scores[0]
+                document.getElementById('score1').style.color = teamInfo.colors[0][1];
+                document.getElementById('score2').innerHTML = teamInfo.names[1] + ": " + teamInfo.scores[1]
+                document.getElementById('score2').style.color = teamInfo.colors[1][1];
+            }
+
             function updateTurnInfo()
             {
                 document.getElementById('turnNumber').innerHTML = "Turn " + turnNumber;
                 document.getElementById('turnPlayer').innerHTML = teamInfo.names[turnPlayer] + "'s turn";
-                document.getElementById('turnPlayer').style.color = teamInfo.colors[teamInfo.names[turnPlayer]][1];
+                document.getElementById('turnPlayer').style.color = teamInfo.colors[turnPlayer][1];
             }
 
             document.getElementById('nextTurn').addEventListener('click', nextTurn);
@@ -432,6 +460,7 @@
                 resizeCanvas();
                 clearScreen();
                 drawMap();
+                drawObjectives();
                 showHoveringTile();
                 drawTanks();
                 if (tileContainsTank(getHoveringTile().x, getHoveringTile().y)) {
@@ -455,7 +484,9 @@
                 turnPlayer = msg.turnPlayer;
                 turnNumber = msg.turnNumber;
                 teamInfo = msg.teams;
+                zoneObjectives = msg.zoneObjectives;
                 updateTurnInfo();
+                updateScoreInfo();
 
                 if (tankSelected >= 0 && tanks[tankSelected].energy <= 0)
                 {
@@ -484,6 +515,10 @@
         <div id="info">
             <div id="turnNumber">Turn 1</div>
             <div id="turnPlayer">Player 1's Turn</div>
+            <p>
+                <div id="score1">Cobalt: 0</div>
+                <div id="score2">Vermillion: 0</div>
+            </p>
             <button id="nextTurn">Next Turn</button>
         </div>
     </body>

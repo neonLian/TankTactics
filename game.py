@@ -12,7 +12,8 @@ class Game:
         self.tanks = []
         self.map = map
         self.teamNames = ["Cobalt", "Vermillion"]
-        self.teamColors = {self.teamNames[0]: ["#080163", "#0a0096"], self.teamNames[1]: ["#cf2b1d", "#E34234"]}
+        self.teamColors = [["#080163", "#0a0096"], ["#cf2b1d", "#E34234"]]
+        self.teamScores = [0, 0]
 
         self.pathfinding = {
             "dist": {},
@@ -23,18 +24,39 @@ class Game:
         self.turnNumber = 1
         self.turnPlayer = 0
 
+        # Contains one list per team, each team has tuples (x, y, w) where x and y are
+        # top left corner coordinates and w is the width of the zone
+        self.zoneObjectives = []
+
     def nextTurn(self):
+        # Reset tank energy
         for t in self.tanks:
             t.energy = TANK_MAX_ENERGY
+
+        # Calculate objective points
+        for objTeam in range(len(self.zoneObjectives)):
+            if objTeam == self.turnPlayer: continue
+            for obj in self.zoneObjectives[objTeam]:
+                numTanks = [0, 0]
+                for t in self.tanks:
+                    if t.x >= obj[0] and t.x < obj[0] + obj[2] and \
+                       t.y >= obj[1] and t.y < obj[1] + obj[2]:
+                       numTanks[t.team] += 1
+                if numTanks[self.turnPlayer] > 0 and numTanks[self.turnPlayer] > numTanks[objTeam]:
+                    self.teamScores[self.turnPlayer] += 1
+
+        # Change turn
         self.turnNumber += 1
         if (self.turnPlayer == 0):
             self.turnPlayer = 1
         else:
             self.turnPlayer = 0
 
+
+
     def newTank(self, name: str, team: int):
         tank = Tank(name, team)
-        tank.setColors(list(self.teamColors.values())[team][0], list(self.teamColors.values())[team][1])
+        tank.setColors(self.teamColors[team][0], self.teamColors[team][1])
         self.tanks.append(tank)
         return tank
 
