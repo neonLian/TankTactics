@@ -52,8 +52,8 @@ for i in range(6):
     t.y = team2_spawns[i][1]
 
 game.zoneObjectives += [
-    [(1, 11, 3),(9, 0, 3)],
-    [(16, 7, 3),(9, 17, 3)]
+    [(1, 11, 3),(7, 0, 3)],
+    [(16, 8, 3),(9, 17, 3)]
 ]
 
 @app.route('/')
@@ -79,13 +79,13 @@ def move(msg):
 
 @socketio.on('checkMove')
 def checkMove(msg):
-    print("Received check move check")
+    # print("Received check move check")
     canMove = False
     if game.map.tiles[msg["x"]][msg["y"]] == tileType["empty"]:
         t = game.tanks[msg["tank"]]
         path = game.shortestPath(t.x, t.y, msg["x"], msg["y"])
         canMove = len(path) > 0 and len(path) <= t.energy
-    print("Sending move check results")
+    # print("Sending move check results")
     socketio.emit('checkMove', {"path": path, "canMove": canMove})
 
 @socketio.on('shoot')
@@ -118,8 +118,20 @@ def shoot(msg):
                     print("Registering shot...")
                     t.useEnergy(2)
                     print(t.energy)
-                    targetTank.takeDamage(2)
+
+                    if (round(msg['toX'], 4)%1 == 0.5 and round(msg['toY'], 4)%1 == 0.5):
+                        targetTank.takeDamage(2)
+                    else:
+                        targetTank.takeDamage(1)
+
                     socketio.emit('syncData', currentSyncData(), broadcast=True)
+
+                    animation = {"fromX": t.x+0.5, "fromY": t.y+0.5, "toX": msg['toX'], "toY": msg['toY']}
+                    socketio.emit('shotAnimation', {'animation': animation}, broadcast=True)
+
+                    game.checkWinner();
+                    if (game.winner >= 0):
+                        socketio.emit('endGame', {'winner': game.winner}, broadcast=True)
                 else:
                     print("Not a clear shot!")
             else:
@@ -135,6 +147,10 @@ def nextTurn(msg):
     game.nextTurn()
     print("Next turn")
     socketio.emit('syncData', currentSyncData(), broadcast=True)
+
+    game.checkWinner();
+    if (game.winner >= 0):
+        socketio.emit('endGame', {'winner': game.winner}, broadcast=True)
 
 @socketio.on('checkShot')
 def checkShot(msg):
@@ -177,7 +193,7 @@ def checkTankShot(msg):
 def currentSyncData():
     return {"map": game_map.tiles, "tanks": game.getTanksJson(),
             "teams": {"names": game.teamNames, "colors": game.teamColors, "scores": game.teamScores},
-            "zoneObjectives": game.zoneObjectives,
+            "zoneObjectives": game.zoneObjectives, "pointsToWin": POINTS_TO_WIN,
             "turnNumber": game.turnNumber, "turnPlayer": game.turnPlayer}
 
 if __name__ == '__main__':

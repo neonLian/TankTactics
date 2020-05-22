@@ -5,7 +5,8 @@ from math import floor, ceil
 
 from queue import PriorityQueue
 
-TANK_WIDTH = 0.8
+
+POINTS_TO_WIN = 8
 
 class Game:
     def __init__(self, map):
@@ -28,11 +29,9 @@ class Game:
         # top left corner coordinates and w is the width of the zone
         self.zoneObjectives = []
 
-    def nextTurn(self):
-        # Reset tank energy
-        for t in self.tanks:
-            t.energy = TANK_MAX_ENERGY
+        self.winner = -1
 
+    def nextTurn(self):
         # Calculate objective points
         for objTeam in range(len(self.zoneObjectives)):
             if objTeam == self.turnPlayer: continue
@@ -51,6 +50,41 @@ class Game:
             self.turnPlayer = 1
         else:
             self.turnPlayer = 0
+
+        # Reset tank energy
+        for t in self.tanks:
+            if t.team == self.turnPlayer:
+                t.energy = TANK_MAX_ENERGY
+            else:
+                t.energy = 0
+
+    def checkWinner(self):
+        # Objective win
+        for team in range(len(self.teamScores)):
+            if self.teamScores[team] >= POINTS_TO_WIN:
+                self.winner = team
+                print("Objective win for " + str(team))
+                return team
+
+        # Elimination win
+        tanksAlive = [0, 0]
+        for t in self.tanks:
+            if t.hp > 0:
+                tanksAlive[t.team] += 1
+        print(tanksAlive)
+        if tanksAlive[0] >= 0 and tanksAlive[1] <= 0:
+            self.winner = 0
+            print("Elimination win for 0")
+            return 0
+        elif tanksAlive[0] <= 0 and tanksAlive[1] >= 0:
+            self.winner = 1
+            print("Elimination win for 1")
+            return 1
+
+
+        self.winner = -1
+        return -1
+
 
 
 

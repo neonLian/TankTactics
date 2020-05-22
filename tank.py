@@ -1,5 +1,5 @@
 TANK_MAX_ENERGY = 4
-
+TANK_WIDTH = 0.6
 
 class Tank:
     def __init__(self, name, team):
@@ -15,6 +15,7 @@ class Tank:
 
         self.x = 0
         self.y = 0
+        self.width = TANK_WIDTH;
 
     def setColors(self, stroke, fill):
         self.strokeColor = stroke

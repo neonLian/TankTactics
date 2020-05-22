@@ -20,7 +20,7 @@
             #info {
                 padding: 10px;
                 font-size: 18px;
-                background-color: "#aaaacc";
+                background-color: #eeeeee;
                 color: "#000000";
                 border-style: solid;
                 border-radius: 5px;
@@ -30,6 +30,24 @@
                 top: 20px;
                 right: 20px;
                 z-index: 3;
+            }
+
+            .centered-axis-xy {
+                  position: absolute;
+                  left: 50%;
+                  top: 50%;
+                  transform: translate(-50%,-50%);
+            }
+
+            #centerInfo {
+                font-size: 30px;
+                color: "#000000";
+                padding: 10px;
+                border-style: solid;
+                border-radius: 5px;
+                border-color: "#444444";
+                background-color: white;
+                display: none;
             }
 
             #nextTurn {
@@ -50,6 +68,7 @@
         var game_map = null;
         var tanks = null;
         var zoneObjectives = null;
+        var pointsToWin = 0;
 
         var cameraX = 0;
         var cameraY = 0;
@@ -60,6 +79,8 @@
 
         var tankSelected = -1;
         var turnNumber = 1;
+
+        var animations = []
 
         var keys = {
             "=": 187,
@@ -147,8 +168,8 @@
                             ctx.fillStyle = teamInfo.colors[i][0] + "30";
                             ctx.strokeStyle = teamInfo.colors[i][1] + "80";
                             ctx.lineWidth = 0.02 * tileDefaultWidth * cameraZoom;
-                            var x = zoneObjectives[i][j][0] * tileDefaultWidth * cameraZoom;
-                            var y = zoneObjectives[i][j][1] * tileDefaultWidth * cameraZoom;
+                            var x = zoneObjectives[i][j][0] * tileDefaultWidth * cameraZoom + cameraX;
+                            var y = zoneObjectives[i][j][1] * tileDefaultWidth * cameraZoom + cameraY;
                             var w = zoneObjectives[i][j][2] * tileDefaultWidth * cameraZoom;
                             ctx.fillRect(x, y, w, w);
                             ctx.strokeRect(x, y, w, w);
@@ -170,16 +191,17 @@
                         } else {
                             ctx.strokeStyle = t.strokeColor;
                         }
-                        ctx.lineWidth = 0.1 * tileDefaultWidth * cameraZoom;
-                        var tw = tileDefaultWidth*cameraZoom*0.6;
+                        var lw = 0.1 * t.width * tileDefaultWidth * cameraZoom;
+                        ctx.lineWidth = lw;
+                        var tw = 0.8 * t.width * tileDefaultWidth*cameraZoom;
                         var tx = (t.x*tileDefaultWidth*cameraZoom + cameraX) + ((tileDefaultWidth*cameraZoom)/2) - tw/2;
                         var ty = (t.y*tileDefaultWidth*cameraZoom + cameraY) + ((tileDefaultWidth*cameraZoom)/2) - tw/2;
 
                         ctx.fillRect(tx, ty, tw, tw);
-                        ctx.strokeRect(tx, ty, tw, tw);
+                        ctx.strokeRect(tx-lw/2, ty-lw/2, tw+lw/2, tw+lw/2);
 
                         // Draw health
-                        ctx.font = 16*cameraZoom + "px Arial";
+                        ctx.font = 0.8*t.width*tileDefaultWidth*cameraZoom + "px Arial";
                         ctx.fillStyle = "#dddddd";
                         ctx.fillText(t.hp, tx+(tw/3), ty+(tileDefaultWidth*cameraZoom/2))
 
@@ -246,11 +268,16 @@
             function checkTankSelection()
             {
                 var curTile = getHoveringTile();
-                tankSelected = -1;
+                // tankSelected = -1;
                 for (var i = 0; i < tanks.length; i++)
                 {
                     if (tanks[i].x === curTile.x && tanks[i].y === curTile.y && tanks[i].team == turnPlayer) {
-                        tankSelected = i;
+                        if (tankSelected == i) {
+                            tankSelected = -1;
+                        } else {
+                            tankSelected = i;
+                        }
+                        targetLoc = (-1, -1)
                         break;
                     }
                 }
@@ -313,11 +340,11 @@
                         } else {
                             ctx.strokeStyle = '#ff3526';
                         }
-                        ctx.lineWidth = 2*cameraZoom;
+                        ctx.lineWidth = 0.05*tileDefaultWidth*cameraZoom;
                         ctx.beginPath();
                         ctx.moveTo(tx, ty);
-                        ctx.lineTo(targetLoc[0] * tileDefaultWidth * cameraZoom,
-                                   targetLoc[1] * tileDefaultWidth * cameraZoom);
+                        ctx.lineTo(targetLoc[0] * tileDefaultWidth * cameraZoom + cameraX,
+                                   targetLoc[1] * tileDefaultWidth * cameraZoom + cameraY);
                         ctx.stroke();
                     }
                 }
@@ -358,9 +385,51 @@
                 }
             }
 
+            var prevTime = 0;
+            function drawAnimations()
+            {
+                var curTime = (new Date()).getTime();
+                var nextAnimations = []
+                var deltaTime = curTime - prevTime;
+                for (var i = 0; i < animations.length; i++)
+                {
+                    var anim = animations[i];
+                    if (anim.curTime <= anim.maxTime)
+                    {
+                        if (anim.type == "shot")
+                        {
+
+                            var x1 = (anim.fromX*tileDefaultWidth*cameraZoom + cameraX);// + ((tileDefaultWidth*cameraZoom)/2);
+                            var y1 = (anim.fromY*tileDefaultWidth*cameraZoom + cameraY);// + ((tileDefaultWidth*cameraZoom)/2);
+                            var x2 = anim.toX * tileDefaultWidth * cameraZoom + cameraX;
+                            var y2 = anim.toY * tileDefaultWidth * cameraZoom + cameraY;
+
+                            var alpha = ((anim.maxTime - anim.curTime)/anim.maxTime);
+                            console.log(alpha)
+                            ctx.strokeStyle = "rgba(255, 255, 255, " + alpha + ")";
+                            ctx.lineWidth = 0.1*tileDefaultWidth*cameraZoom;
+
+                            ctx.beginPath();
+                            ctx.moveTo(x1,y1);
+                            ctx.lineTo(x2,y2);
+                            ctx.stroke();
+
+                        }
+
+                        anim.curTime += deltaTime;
+                        if (anim.curTime <= anim.maxTime) {
+                            nextAnimations.push(anim);
+                        }
+
+                    }
+                }
+                prevTime = curTime;
+                animations = nextAnimations;
+            }
+
             function shoot()
             {
-                if (tankSelected >= 0 && tileContainsTank(getHoveringTile().x, getHoveringTile().y))
+                if (tankSelected >= 0 && targetLoc[0] >= 0 && targetLoc[1] >= 0 && tileContainsTank(getHoveringTile().x, getHoveringTile().y))
                 {
                     console.log('shooting');
                     socket.emit('shoot', {shooter: tankSelected, toX: targetLoc[0], toY: targetLoc[1]})
@@ -371,15 +440,42 @@
             var teamInfo = {};
             function nextTurn()
             {
+                tankSelected = -1;
+                targetLoc = (-1, -1)
                 console.log('next turn')
                 socket.emit('nextTurn', {});
             }
 
+            var prevDragX = undefined;
+            var prevDragY = undefined;
+            var isDragging = false;
+            function checkMouseDrag()
+            {
+                if (isDragging) {
+                    if (prevDragX === undefined || prevDragY === undefined) {
+                        prevDragX = mousePos.x;
+                        prevDragY = mousePos.y;
+                    } else {
+                        cameraX += mousePos.x - prevDragX;
+                        cameraY += mousePos.y - prevDragY;
+                        prevDragX = mousePos.x;
+                        prevDragY = mousePos.y;
+                    }
+                }
+            }
+
+            function stopMouseDrag()
+            {
+                isDragging = false;
+                prevDragX = undefined;
+                prevDragY = undefined;
+            }
+
             function updateScoreInfo()
             {
-                document.getElementById('score1').innerHTML = teamInfo.names[0] + ": " + teamInfo.scores[0]
+                document.getElementById('score1').innerHTML = teamInfo.names[0] + ": " + teamInfo.scores[0] + "/" + pointsToWin;
                 document.getElementById('score1').style.color = teamInfo.colors[0][1];
-                document.getElementById('score2').innerHTML = teamInfo.names[1] + ": " + teamInfo.scores[1]
+                document.getElementById('score2').innerHTML = teamInfo.names[1] + ": " + teamInfo.scores[1] + "/" + pointsToWin;
                 document.getElementById('score2').style.color = teamInfo.colors[1][1];
             }
 
@@ -395,16 +491,37 @@
             canvas.addEventListener('mousedown', function(evt) {
                 if (evt.button == 0) {
                     checkTankSelection();
-                    checkShot();
-                } else if (evt.button == 2) {
-                    if (tileContainsTank(getHoveringTile().x, getHoveringTile().y)) {
-                        shoot();
-                    } else {
-                        moveSelectedTank();
+                    isDragging = true;
+                    if (tankSelected >= 0)
+                    {
+                        checkShot();
+                        if (tileContainsTank(getHoveringTile().x, getHoveringTile().y)) {
+                            shoot();
+                        } else {
+                            moveSelectedTank();
+                        }
                     }
                 }
 
             }, false);
+
+            canvas.addEventListener('mouseup', function(evt) {
+                if (evt.button == 0) {
+                    stopMouseDrag();
+                }
+            })
+
+            canvas.addEventListener('wheel', function(event)
+            {
+                if (event.deltaY < 0)
+                {
+                    cameraZoom += 0.05;
+                }
+                else if (event.deltaY > 0)
+                {
+                    cameraZoom -= 0.05;
+                }
+            });
 
 
             var prevTileX = -1;
@@ -421,8 +538,8 @@
 
                     checkShot();
 
-                    if (mouseTilePos.x >= 0 && mouseTilePos.x <= game_map.length &&
-                        mouseTilePos.y >= 0 && mouseTilePos.y <= game_map[0].length &&
+                    if (mouseTilePos.x >= 0 && mouseTilePos.x < game_map.length &&
+                        mouseTilePos.y >= 0 && mouseTilePos.y < game_map[0].length &&
                         game_map[mouseTilePos.x][mouseTilePos.y] == 1)
                     {
                         checkMove();
@@ -456,9 +573,11 @@
                 }
             })
 
+            // Main game loop
             setInterval(function() {
                 resizeCanvas();
                 clearScreen();
+                checkMouseDrag();
                 drawMap();
                 drawObjectives();
                 showHoveringTile();
@@ -468,6 +587,7 @@
                 } else {
                     drawMoveLine();
                 }
+                drawAnimations();
             }, 1000/30)
 
 
@@ -485,6 +605,7 @@
                 turnNumber = msg.turnNumber;
                 teamInfo = msg.teams;
                 zoneObjectives = msg.zoneObjectives;
+                pointsToWin = msg.pointsToWin;
                 updateTurnInfo();
                 updateScoreInfo();
 
@@ -505,6 +626,21 @@
                 // console.log(movePath);
             })
 
+            socket.on('shotAnimation', function(msg) {
+                var anim = msg.animation;
+                anim.curTime = 0;
+                anim.maxTime = 3000;
+                anim.type = 'shot';
+                animations.push(anim);
+            })
+
+            socket.on('endGame', function(msg) {
+                console.log('Received winner: ' + msg.winner);
+                document.getElementById('centerInfo').innerHTML = teamInfo.names[msg.winner] + " wins!";
+                document.getElementById('centerInfo').style.display = "inline";
+                document.getElementById('centerInfo').style.color = teamInfo.colors[msg.winner][1];
+            })
+
         }, false)
 
         </script>
@@ -512,6 +648,7 @@
     <body>
         <!-- <h1 id="test"></h1> -->
         <canvas id="canvas" width="300" height="300"></canvas>
+        <div id="centerInfo" class="centered-axis-xy"></div>
         <div id="info">
             <div id="turnNumber">Turn 1</div>
             <div id="turnPlayer">Player 1's Turn</div>
