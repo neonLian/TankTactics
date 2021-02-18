@@ -19,7 +19,8 @@
 
             #info {
                 padding: 10px;
-                font-size: 18px;
+                font-size: 24px;
+                width: 250px;
                 background-color: #eeeeee;
                 color: "#000000";
                 border-style: solid;
@@ -32,6 +33,47 @@
                 z-index: 3;
             }
 
+            #chatbox {
+                padding: 10px;
+                font-size: 18px;
+                width: 250px;
+                height: 50%;
+                background-color: #eeeeee;
+                color: "#000000";
+                border-style: solid;
+                border-radius: 5px;
+                border-color: "#444444";
+                float: right;
+                position: absolute;
+                bottom: 20px;
+                right: 20px;
+                z-index: 3;
+            }
+
+            #messages
+            {
+                margin: 5px 0;
+                display: block;
+                font-size: 12px;
+                width: 100%;
+                height: 70%;
+                background-color: white;
+                overflow-y: scroll;
+                word-wrap:break-word;
+            }
+
+            input
+            {
+                width: 90%;
+            }
+
+            #chatInput
+            {
+                margin: 3px;
+                position: absolute;
+                bottom: 10px;
+            }
+
             .centered-axis-xy {
                   position: absolute;
                   left: 50%;
@@ -40,7 +82,7 @@
             }
 
             #centerInfo {
-                font-size: 30px;
+                font-size: 40px;
                 color: "#000000";
                 padding: 10px;
                 border-style: solid;
@@ -81,6 +123,8 @@
         var turnNumber = 1;
 
         var animations = []
+
+        var test;
 
         var keys = {
             "=": 187,
@@ -203,7 +247,9 @@
                         // Draw health
                         ctx.font = 0.8*t.width*tileDefaultWidth*cameraZoom + "px Arial";
                         ctx.fillStyle = "#dddddd";
-                        ctx.fillText(t.hp, tx+(tw/3), ty+(tileDefaultWidth*cameraZoom/2))
+                        ctx.textAlign = 'center';
+                        ctx.fillText(t.hp, (t.x+0.5)*tileDefaultWidth*cameraZoom + cameraX, (t.y+0.65)*tileDefaultWidth*cameraZoom + cameraY);
+                        // ctx.fillText(t.hp, tx+(tw/3), ty+(tileDefaultWidth*cameraZoom/2))
 
                         // Draw energy
 
@@ -314,7 +360,7 @@
                     for (var i = 0; i < tanks.length; i++)
                     {
                         if (mouseTilePos.x == tanks[i].x && mouseTilePos.y == tanks[i].y) {
-                            socket.emit('checkTankShot', {fromX: t.x+0.5, fromY: t.y+0.5, toX: getTileMousePos().x, toY: getTileMousePos().y})
+                            socket.emit('checkTankShot', {fromX: t.x+0.5, fromY: t.y+0.5, toX: getTileMousePos().x, toY: getTileMousePos().y, playerName: getPlayerName()})
                         }
                     }
 
@@ -340,7 +386,7 @@
                         } else {
                             ctx.strokeStyle = '#ff3526';
                         }
-                        ctx.lineWidth = 0.05*tileDefaultWidth*cameraZoom;
+                        ctx.lineWidth = 0.04*tileDefaultWidth*cameraZoom;
                         ctx.beginPath();
                         ctx.moveTo(tx, ty);
                         ctx.lineTo(targetLoc[0] * tileDefaultWidth * cameraZoom + cameraX,
@@ -358,7 +404,7 @@
                 {
                     console.log("Sending move check")
                     var mouseTile = getHoveringTile();
-                    socket.emit('checkMove', {tank: tankSelected, x: mouseTile.x, y:mouseTile.y})
+                    socket.emit('checkMove', {tank: tankSelected, x: mouseTile.x, y:mouseTile.y, playerName: getPlayerName()})
                 }
             }
 
@@ -486,6 +532,28 @@
                 document.getElementById('turnPlayer').style.color = teamInfo.colors[turnPlayer][1];
             }
 
+            function getPlayerName()
+            {
+                var name = document.getElementById('nameInput').value;
+                if (name == undefined || name == "") {
+                    name = "Anonymous"
+                }
+                return name;
+            }
+
+            var idNumber = Math.floor(Math.random() * 1000);
+            function onChatInputReceived(e)
+            {
+                if (e.keyCode === 13)
+                {
+                    var message = document.getElementById('chatInput').value;
+                    var name = getPlayerName();
+                    socket.emit('sendChatMessage', {"message": message, "name": name, "idNumber": idNumber});
+                    document.getElementById('chatInput').value = "";
+                }
+            }
+            document.getElementById('chatInput').addEventListener('keydown', onChatInputReceived);
+
             document.getElementById('nextTurn').addEventListener('click', nextTurn);
 
             canvas.addEventListener('mousedown', function(evt) {
@@ -554,23 +622,27 @@
 
 
             document.addEventListener("keydown", function(e) {
-                var key = e.keyCode;
-                console.log("received key " + key);
-                if (key == keys["="]) {
-                    cameraZoom += 0.1;
-                } else if (key == keys["-"]) {
-                    cameraZoom -= 0.1;
-                } else if (key == keys["up"] || key == keys["w"]) {
-                    cameraY += tileDefaultWidth*cameraZoom;
-                } else if (key == keys["down"] || key == keys["s"]) {
-                    cameraY -= tileDefaultWidth*cameraZoom;
-                } else if (key == keys["left"] || key == keys["a"]) {
-                    cameraX += tileDefaultWidth*cameraZoom;
-                } else if (key == keys["right"] || key == keys["d"]) {
-                    cameraX -= tileDefaultWidth*cameraZoom;
-                } else if (key == keys["enter"]) {
-                    nextTurn();
+                if (document.activeElement.nodeName != "INPUT")
+                {
+                    var key = e.keyCode;
+                    console.log("received key " + key);
+                    if (key == keys["="]) {
+                        cameraZoom += 0.1;
+                    } else if (key == keys["-"]) {
+                        cameraZoom -= 0.1;
+                    } else if (key == keys["up"] || key == keys["w"]) {
+                        cameraY += tileDefaultWidth*cameraZoom;
+                    } else if (key == keys["down"] || key == keys["s"]) {
+                        cameraY -= tileDefaultWidth*cameraZoom;
+                    } else if (key == keys["left"] || key == keys["a"]) {
+                        cameraX += tileDefaultWidth*cameraZoom;
+                    } else if (key == keys["right"] || key == keys["d"]) {
+                        cameraX -= tileDefaultWidth*cameraZoom;
+                    }
                 }
+                // } else if (key == keys["enter"]) {
+                //     nextTurn();
+                // }
             })
 
             // Main game loop
@@ -613,6 +685,10 @@
                 {
                     tankSelected = -1;
                 }
+                if (msg.winner < 0)
+                {
+                    document.getElementById('centerInfo').style.display = "none";
+                }
             })
 
             socket.on('checkTankShot', function(msg) {
@@ -641,6 +717,10 @@
                 document.getElementById('centerInfo').style.color = teamInfo.colors[msg.winner][1];
             })
 
+            socket.on('newChatMessage', function(msg) {
+                document.getElementById('messages').innerHTML += "<div><strong>" + msg.name + "[" + msg.idNumber + "]:</strong> " + msg.message + "</div>";
+            })
+
         }, false)
 
         </script>
@@ -657,6 +737,17 @@
                 <div id="score2">Vermillion: 0</div>
             </p>
             <button id="nextTurn">Next Turn</button>
+        </div>
+        <div id="chatbox">
+            <div style="margin-bottom: 10px;">
+                <!-- <div style="text-decoration:underline;">Name</div> -->
+                <div><input type="text" id="nameInput" placeholder="Name"></input></div>
+            </div>
+            <div style="text-decoration:underline;">Chat</div>
+            <div id="messages"></div>
+            <div id="chatInputDiv">
+                <input type="text" id="chatInput"></input>
+            </div>
         </div>
     </body>
 </html>

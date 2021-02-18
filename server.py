@@ -39,8 +39,8 @@ game = Game(game_map)
 # ]
 
 # tunnelrows.map
-team1_spawns = [[y, 1] for y in range(2, 8)]
-team2_spawns = [[17, x] for x in range(10,16)]
+team1_spawns = [[y, 1] for y in range(1, 7)]
+team2_spawns = [[17, x] for x in range(9,15)]
 
 for i in range(6):
     t = game.newTank("Tank " + str(i+1), 0)
@@ -87,6 +87,8 @@ def checkMove(msg):
         canMove = len(path) > 0 and len(path) <= t.energy
     # print("Sending move check results")
     socketio.emit('checkMove', {"path": path, "canMove": canMove})
+
+    game.teamNames[game.turnPlayer] = msg['playerName']
 
 @socketio.on('shoot')
 def shoot(msg):
@@ -190,11 +192,20 @@ def checkTankShot(msg):
                 break
     socketio.emit('checkTankShot', {"canShoot": canShoot, "targetLoc": targetLoc})
 
+    game.teamNames[game.turnPlayer] = msg['playerName']
+
+@socketio.on('sendChatMessage')
+def newChatMessage(msg):
+    outName = msg['name'][:30]
+    outMessage = msg['message'][:100]
+    socketio.emit('newChatMessage', {"message": outMessage, "name": outName, "idNumber": msg['idNumber']}, broadcast=True)
+
 def currentSyncData():
     return {"map": game_map.tiles, "tanks": game.getTanksJson(),
             "teams": {"names": game.teamNames, "colors": game.teamColors, "scores": game.teamScores},
             "zoneObjectives": game.zoneObjectives, "pointsToWin": POINTS_TO_WIN,
-            "turnNumber": game.turnNumber, "turnPlayer": game.turnPlayer}
+            "turnNumber": game.turnNumber, "turnPlayer": game.turnPlayer,
+            "winner": game.winner}
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', debug=False)
