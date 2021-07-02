@@ -1,3 +1,4 @@
 flask
 flask-socketio==4.3
 python-socketio==4.6.1
+gevent-websocket==0.10.1
