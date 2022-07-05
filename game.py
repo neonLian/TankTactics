@@ -12,7 +12,8 @@ class Game:
     def __init__(self, map):
         self.tanks = []
         self.map = map
-        self.teamNames = ["Cobalt", "Vermillion"]
+        self.defaultTeamNames = ["Cobalt", "Vermillion"]
+        self.teamNames = list(self.defaultTeamNames)
         self.teamColors = [["#080163", "#0a0096"], ["#cf2b1d", "#E34234"]]
         self.teamScores = [0, 0]
 

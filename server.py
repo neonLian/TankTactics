@@ -17,7 +17,7 @@ logging.getLogger('engineio').setLevel(logging.ERROR)
 socketio = SocketIO(app)
 
 map_tiles = []
-with open('maps/tunnelrows.map') as mapfile:
+with open('maps/tunnelrows.ttmap') as mapfile:
     for line in mapfile:
         map_tiles.append([int(x) for x in line.strip()])
 
@@ -56,6 +56,12 @@ game.zoneObjectives += [
     [(16, 8, 3),(9, 17, 3)]
 ]
 
+def setTeamName(msg):
+    if len(msg['playerName']) > 0:
+        game.teamNames[game.turnPlayer] = msg['playerName']
+    else:
+        game.teamNames[game.turnPlayer] = game.defaultTeamNames[game.turnPlayer]
+
 @app.route('/')
 def sessions():
     return render_template('game.html')
@@ -88,7 +94,7 @@ def checkMove(msg):
     # print("Sending move check results")
     socketio.emit('checkMove', {"path": path, "canMove": canMove})
 
-    game.teamNames[game.turnPlayer] = msg['playerName']
+    setTeamName(msg)
 
 @socketio.on('shoot')
 def shoot(msg):
@@ -192,7 +198,7 @@ def checkTankShot(msg):
                 break
     socketio.emit('checkTankShot', {"canShoot": canShoot, "targetLoc": targetLoc})
 
-    game.teamNames[game.turnPlayer] = msg['playerName']
+    setTeamName(msg)
 
 @socketio.on('sendChatMessage')
 def newChatMessage(msg):

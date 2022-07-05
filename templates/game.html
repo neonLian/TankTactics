@@ -536,7 +536,7 @@
             {
                 var name = document.getElementById('nameInput').value;
                 if (name == undefined || name == "") {
-                    name = "Anonymous"
+                    name = ""
                 }
                 return name;
             }
@@ -548,6 +548,9 @@
                 {
                     var message = document.getElementById('chatInput').value;
                     var name = getPlayerName();
+                    if (name == "") {
+                        name = "Anon.";
+                    }
                     socket.emit('sendChatMessage', {"message": message, "name": name, "idNumber": idNumber});
                     document.getElementById('chatInput').value = "";
                 }
