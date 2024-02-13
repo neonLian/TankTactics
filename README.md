@@ -10,6 +10,11 @@ To start the server, run `server.py` with python. By default it will open on por
 ## Dependencies
 The server runs on Python 3 using flask and SocketIO. It is very important to get the exact version of flask-socketio below or it might not work.
 
+A `requirements.txt` file is in the repository to install the correct versions easily. Use the below command to install flask and socketio with the necessary versions:
+```
+pip install -r requirements.txt
+```
+
 Python modules:
 ```
 flask
