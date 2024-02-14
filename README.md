@@ -1,6 +1,8 @@
 # TankTactics
 A 2D turn based tactics/strategy game with tanks
 
+![Screenshot of TankTactics](https://github.com/neonLian/TankTactics/blob/07e1831dcddc36e3b94f122028c9df64169e4f4a/tanktactics.png)
+
 ## How to start server
 
 To start the server, run `server.py` with python. By default it will open on port 5000. To play the game, go to your IP address at port 5000 in your browser:
