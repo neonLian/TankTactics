@@ -25,7 +25,7 @@ def intersectSquare(p1, p2, x, y, w):
     # Vertical line
     if p1[0] == p2[0]:
         if p1[0] >= x and p1[0] <= x+w:
-            if (p1[1] < y+w and p2[1] > y) or (p2[1] < y+w and p1[0] > y):
+            if (p1[1] < y+w and p2[1] > y) or (p2[1] < y+w and p1[1] > y):
                 return True
         return False
 
