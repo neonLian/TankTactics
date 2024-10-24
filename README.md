@@ -5,6 +5,15 @@ A 2D turn based tactics/strategy game with tanks
 
 ## How to start server
 
+Option 1: Build a Docker image using the provided Dockerfile
+
+```
+docker build -t tanktactics .
+docker run --publish 5000:5000 tanktactics
+```
+
+Option 2: Manual
+
 To start the server, run `server.py` with python. By default it will open on port 5000. To play the game, go to your IP address at port 5000 in your browser:
 
 `http://<your IP address>:5000`
